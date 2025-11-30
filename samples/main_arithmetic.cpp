@@ -1,176 +1,139 @@
-
-
-#include <iostream>
-#include <string>
-#include <windows.h>
 #include "arithmetic.h"
+#include <iostream>
+#include <iomanip>
 
 using namespace std;
 
-void PrintMenu()
-{
-    cout << "\n=== Calculator ===" << endl;
-    cout << "1. Enter new expression" << endl;
-    cout << "2. Convert to postfix" << endl;
-    cout << "3. Set variables and calculate" << endl;
-    cout << "4. Calculate (without variables)" << endl;
-    cout << "5. Show current expression" << endl;
-    cout << "0. Exit" << endl;
-    cout << "Choose action: ";
+void displayMenu() {
+    cout << "\n========================================\n";
+    cout << "  ARITHMETIC EXPRESSION CALCULATOR\n";
+    cout << "========================================\n";
+    cout << "1. Enter expression\n";
+    cout << "2. Convert to postfix\n";
+    cout << "3. Calculate result\n";
+    cout << "4. Show current expression\n";
+    cout << "5. Help (supported operations)\n";
+    cout << "0. Exit\n";
+    cout << "========================================\n";
+    cout << "Your choice: ";
 }
 
-int main()
-{
-    cout << "Arithmetic Expression Calculator" << endl;
-    cout << "Supported operations: +, -, *, /, ^ (power)" << endl;
-    cout << "Supported functions: sin, cos, exp, log, tg (tan)" << endl;
-    cout << "Brackets and variables (single letter) supported" << endl;
-    cout << "\nExpression examples:" << endl;
-    cout << "  2+3*4" << endl;
-    cout << "  (a+b)*c" << endl;
-    cout << "  sin(0)+cos(0)" << endl;
-    cout << "  2*sin(a)+3*cos(b)" << endl;
-    cout << "  exp(1)+log(2.71828)" << endl;
+void displayHelp() {
+    cout << "\n========================================\n";
+    cout << "         SUPPORTED OPERATIONS\n";
+    cout << "========================================\n";
+    cout << "Basic operators:\n";
+    cout << "  + : Addition\n";
+    cout << "  - : Subtraction\n";
+    cout << "  * : Multiplication\n";
+    cout << "  / : Division\n";
+    cout << "  ^ : Power\n\n";
+    cout << "Functions:\n";
+    cout << "  sin(x) : Sine (in radians)\n";
+    cout << "  cos(x) : Cosine (in radians)\n";
+    cout << "  tg(x)  : Tangent (in radians)\n";
+    cout << "  log(x) : Natural logarithm\n";
+    cout << "  exp(x) : Exponential (e^x)\n\n";
+    cout << "Examples:\n";
+    cout << "  2 + 3 * 4\n";
+    cout << "  sin(3.14159 / 2)\n";
+    cout << "  (5 + 3) * 2 - log(10)\n";
+    cout << "  2 ^ 3 + cos(0)\n";
+    cout << "========================================\n";
+}
 
-    TPostfix postfix;
-    string expression = "";
+int main() {
+    ArithmeticExpression expr;
     int choice;
+    bool hasExpression = false;
 
-    do
-    {
-        PrintMenu();
+    cout << fixed << setprecision(6);
+
+    while (true) {
+        displayMenu();
         cin >> choice;
         cin.ignore();
 
-        try
-        {
-            switch (choice)
-            {
-            case 1:
-            {
+        try {
+            switch (choice) {
+            case 1: {
                 cout << "\nEnter arithmetic expression: ";
-                getline(cin, expression);
-                postfix.SetInfix(expression);
-                cout << "Expression accepted: " << expression << endl;
+                string input;
+                getline(cin, input);
+
+                expr.setInfixExpression(input);
+
+                if (!expr.validate()) {
+                    cout << "ERROR: Invalid expression (check parentheses)\n";
+                    hasExpression = false;
+                }
+                else {
+                    cout << "Expression saved successfully!\n";
+                    hasExpression = true;
+                }
                 break;
             }
 
-            case 2:
-            {
-                if (expression.empty())
-                {
-                    cout << "Enter expression first!" << endl;
+            case 2: {
+                if (!hasExpression) {
+                    cout << "ERROR: Please enter an expression first (option 1)\n";
                     break;
                 }
 
-                string postfixForm = postfix.ToPostfix();
-                cout << "\nInfix form:   " << postfix.GetInfix() << endl;
-                cout << "Postfix form: " << postfixForm << endl;
+                expr.convertToPostfix();
+                cout << "\nInfix expression:   " << expr.getInfixExpression() << endl;
+                cout << "Postfix expression: " << expr.getPostfixExpression() << endl;
                 break;
             }
 
-            case 3:
-            {
-                if (expression.empty())
-                {
-                    cout << "Enter expression first!" << endl;
+            case 3: {
+                if (!hasExpression) {
+                    cout << "ERROR: Please enter an expression first (option 1)\n";
                     break;
                 }
 
-                cout << "\nEnter variable values:" << endl;
+                expr.convertToPostfix();
+                double result = expr.calculate();
 
-                // Find all unique variables
-                string vars = "";
-                for (size_t i = 0; i < expression.length(); i++)
-                {
-                    char c = expression[i];
-                    if (isalpha(c) && vars.find(c) == string::npos)
-                    {
-                        // Check if it's part of a function name
-                        bool isFunc = false;
-                        if (i + 2 < expression.length())
-                        {
-                            string check = expression.substr(i, 3);
-                            if (check == "sin" || check == "cos" || check == "exp" || check == "log")
-                                isFunc = true;
-                        }
-                        if (i + 1 < expression.length())
-                        {
-                            string check = expression.substr(i, 2);
-                            if (check == "tg")
-                                isFunc = true;
-                        }
-
-                        if (!isFunc)
-                            vars += c;
-                    }
-                }
-
-                for (char c : vars)
-                {
-                    double value;
-                    cout << c << " = ";
-                    cin >> value;
-
-                    string varName(1, c);
-                    postfix.SetOperand(varName, value);
-                }
-
-                double result = postfix.Calculate();
-                cout << "\nResult: " << result << endl;
+                cout << "\nExpression: " << expr.getInfixExpression() << endl;
+                cout << "Postfix:    " << expr.getPostfixExpression() << endl;
+                cout << "Result:     " << result << endl;
                 break;
             }
 
-            case 4:
-            {
-                if (expression.empty())
-                {
-                    cout << "Enter expression first!" << endl;
+            case 4: {
+                if (!hasExpression) {
+                    cout << "ERROR: No expression entered yet\n";
                     break;
                 }
 
-                double result = postfix.Calculate();
-                cout << "\nResult: " << result << endl;
-                break;
-            }
-
-            case 5:
-            {
-                if (expression.empty())
-                {
-                    cout << "Expression not set" << endl;
-                }
-                else
-                {
-                    cout << "\nCurrent expression: " << expression << endl;
-                    if (!postfix.GetPostfix().empty())
-                        cout << "Postfix form: " << postfix.GetPostfix() << endl;
+                cout << "\nCurrent infix expression: " << expr.getInfixExpression() << endl;
+                if (!expr.getPostfixExpression().empty()) {
+                    cout << "Postfix expression: " << expr.getPostfixExpression() << endl;
                 }
                 break;
             }
 
-            case 0:
-                cout << "Exiting..." << endl;
+            case 5: {
+                displayHelp();
                 break;
+            }
 
-            default:
-                cout << "Invalid choice! Try again." << endl;
+            case 0: {
+                cout << "\nThank you for using the calculator. Goodbye!\n";
+                return 0;
+            }
+
+            default: {
+                cout << "ERROR: Invalid choice. Please select 0-5\n";
+                break;
+            }
             }
         }
-        catch (const char* error)
-        {
-            cout << "\nError: " << error << endl;
+        catch (const exception& e) {
+            cout << "\nERROR: " << e.what() << endl;
         }
-        catch (const string& error)
-        {
-            cout << "\nError: " << error << endl;
-        }
-        catch (...)
-        {
-            cout << "\nUnknown error!" << endl;
-        }
-
-    } while (choice != 0);
+    }
 
     return 0;
 }

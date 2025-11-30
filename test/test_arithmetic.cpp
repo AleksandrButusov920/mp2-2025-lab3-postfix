@@ -1,451 +1,654 @@
-﻿// тесты для вычисления арифметических выражений
-
-#include "arithmetic.h"
+﻿#include "arithmetic.h"
 #include <gtest.h>
+#include <cmath>
 
-// Тесты конструктора и базовых методов
-TEST(TPostfix, can_create_postfix)
-{
-	ASSERT_NO_THROW(TPostfix p);
+const double EPSILON = 1e-6;
+
+class ArithmeticExpressionTest : public ::testing::Test {
+protected:
+    ArithmeticExpression* expr = nullptr;
+
+    void SetUp() override {
+        expr = new ArithmeticExpression();
+    }
+
+    void TearDown() override {
+        delete expr;
+        expr = nullptr;
+    }
+
+    bool areEqual(double a, double b) {
+        return std::fabs(a - b) < EPSILON;
+    }
+};
+
+// ========== Тесты конструктора ==========
+
+TEST_F(ArithmeticExpressionTest, DefaultConstructor) {
+    EXPECT_EQ(expr->getInfixExpression(), "");
+    EXPECT_EQ(expr->getPostfixExpression(), "");
 }
 
-TEST(TPostfix, can_create_postfix_with_expression)
-{
-	ASSERT_NO_THROW(TPostfix p("a+b"));
+TEST_F(ArithmeticExpressionTest, ParameterizedConstructor) {
+    ArithmeticExpression expr2("2 + 3");
+    EXPECT_EQ(expr2.getInfixExpression(), "2 + 3");
+    EXPECT_FALSE(expr2.getPostfixExpression().empty());
 }
 
-TEST(TPostfix, can_get_infix)
-{
-	TPostfix p("a+b");
-	EXPECT_EQ("a+b", p.GetInfix());
+// ========== Тесты установщика и получателя ==========
+
+TEST_F(ArithmeticExpressionTest, SetAndGetInfixExpression) {
+    expr->setInfixExpression("1 + 2");
+    EXPECT_EQ(expr->getInfixExpression(), "1 + 2");
 }
 
-TEST(TPostfix, can_set_infix)
-{
-	TPostfix p;
-	ASSERT_NO_THROW(p.SetInfix("a+b"));
-	EXPECT_EQ("a+b", p.GetInfix());
+TEST_F(ArithmeticExpressionTest, SetInfixClearsPostfix) {
+    expr->setInfixExpression("1 + 2");
+    expr->convertToPostfix();
+    EXPECT_FALSE(expr->getPostfixExpression().empty());
+
+    expr->setInfixExpression("3 + 4");
+    EXPECT_EQ(expr->getPostfixExpression(), "");
 }
 
-// Тесты преобразования в постфиксную форму
-TEST(TPostfix, can_convert_simple_addition)
-{
-	TPostfix p("a+b");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a b + ", postfix);
+// ========== Базовые операции ==========
+
+TEST_F(ArithmeticExpressionTest, BasicAddition) {
+    expr->setInfixExpression("2 + 3");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 5.0));
 }
 
-TEST(TPostfix, can_convert_simple_subtraction)
-{
-	TPostfix p("a-b");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a b - ", postfix);
+TEST_F(ArithmeticExpressionTest, BasicSubtraction) {
+    expr->setInfixExpression("10 - 4");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 6.0));
 }
 
-TEST(TPostfix, can_convert_simple_multiplication)
-{
-	TPostfix p("a*b");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a b * ", postfix);
+TEST_F(ArithmeticExpressionTest, BasicMultiplication) {
+    expr->setInfixExpression("3 * 4");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 12.0));
 }
 
-TEST(TPostfix, can_convert_simple_division)
-{
-	TPostfix p("a/b");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a b / ", postfix);
+TEST_F(ArithmeticExpressionTest, BasicDivision) {
+    expr->setInfixExpression("15 / 3");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 5.0));
 }
 
-TEST(TPostfix, can_convert_expression_with_priority)
-{
-	TPostfix p("a+b*c");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a b c * + ", postfix);
+TEST_F(ArithmeticExpressionTest, PowerOperation) {
+    expr->setInfixExpression("2 ^ 3");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 8.0));
 }
 
-TEST(TPostfix, can_convert_expression_with_parentheses)
-{
-	TPostfix p("(a+b)*c");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a b + c * ", postfix);
+TEST_F(ArithmeticExpressionTest, PowerOfZero) {
+    expr->setInfixExpression("5 ^ 0");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 1.0));
 }
 
-TEST(TPostfix, can_convert_complex_expression)
-{
-	TPostfix p("(a+b)*(c-d)");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a b + c d - * ", postfix);
+// ========== Тесты приоритетов ==========
+
+TEST_F(ArithmeticExpressionTest, MultiplicationBeforeAddition) {
+    expr->setInfixExpression("2 + 3 * 4");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 14.0));
 }
 
-TEST(TPostfix, can_convert_expression_with_multiple_operations)
-{
-	TPostfix p("a+b-c*d/e");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a b + c d * e / - ", postfix);
+TEST_F(ArithmeticExpressionTest, DivisionBeforeSubtraction) {
+    expr->setInfixExpression("20 - 10 / 2");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 15.0));
 }
 
-TEST(TPostfix, can_convert_nested_parentheses)
-{
-	TPostfix p("((a+b)*c)");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a b + c * ", postfix);
+TEST_F(ArithmeticExpressionTest, PowerHighestPrecedence) {
+    expr->setInfixExpression("2 + 3 ^ 2");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 11.0));
 }
 
-TEST(TPostfix, can_convert_expression_with_numbers)
-{
-	TPostfix p("2+3");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("2 3 + ", postfix);
+// ========== Наличие скобок ==========
+
+TEST_F(ArithmeticExpressionTest, SimpleParentheses) {
+    expr->setInfixExpression("(2 + 3) * 4");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 20.0));
 }
 
-TEST(TPostfix, can_convert_expression_with_multi_digit_numbers)
-{
-	TPostfix p("12+34");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("12 34 + ", postfix);
+TEST_F(ArithmeticExpressionTest, NestedParentheses) {
+    expr->setInfixExpression("((2 + 3) * (4 + 1))");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 25.0));
 }
 
-TEST(TPostfix, throws_on_mismatched_parentheses_left)
-{
-	TPostfix p("(a+b");
-	ASSERT_ANY_THROW(p.ToPostfix());
+TEST_F(ArithmeticExpressionTest, MultipleParentheses) {
+    expr->setInfixExpression("(5 + 3) * 2 - (4 / 2)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 14.0));
 }
 
-TEST(TPostfix, throws_on_mismatched_parentheses_right)
-{
-	TPostfix p("a+b)");
-	ASSERT_ANY_THROW(p.ToPostfix());
+// ========== Тесты на десятичные числа ==========
+
+TEST_F(ArithmeticExpressionTest, DecimalAddition) {
+    expr->setInfixExpression("3.5 + 2.5");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 6.0));
 }
 
-// Тесты вычисления
-TEST(TPostfix, can_calculate_simple_addition)
-{
-	TPostfix p("2+3");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(5.0, result);
+TEST_F(ArithmeticExpressionTest, DecimalMultiplication) {
+    expr->setInfixExpression("2.5 * 4.0");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 10.0));
 }
 
-TEST(TPostfix, can_calculate_simple_subtraction)
-{
-	TPostfix p("10-3");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(7.0, result);
+// ========== Function Tests: sin ==========
+
+TEST_F(ArithmeticExpressionTest, SineZero) {
+    expr->setInfixExpression("sin(0)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 0.0));
 }
 
-TEST(TPostfix, can_calculate_simple_multiplication)
-{
-	TPostfix p("4*5");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(20.0, result);
+TEST_F(ArithmeticExpressionTest, SinePiOverTwo) {
+    expr->setInfixExpression("sin(1.5707963267948966)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 1.0));
 }
 
-TEST(TPostfix, can_calculate_simple_division)
-{
-	TPostfix p("15/3");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(5.0, result);
+TEST_F(ArithmeticExpressionTest, SineWithExpression) {
+    expr->setInfixExpression("sin(3.14159265 / 2)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 1.0));
 }
 
-TEST(TPostfix, can_calculate_expression_with_priority)
-{
-	TPostfix p("2+3*4");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(14.0, result);
+// ========== Function Tests: cos ==========
+
+TEST_F(ArithmeticExpressionTest, CosineZero) {
+    expr->setInfixExpression("cos(0)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 1.0));
 }
 
-TEST(TPostfix, can_calculate_expression_with_parentheses)
-{
-	TPostfix p("(2+3)*4");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(20.0, result);
+TEST_F(ArithmeticExpressionTest, CosinePi) {
+    expr->setInfixExpression("cos(3.14159265)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, -1.0));
 }
 
-TEST(TPostfix, can_calculate_complex_expression)
-{
-	TPostfix p("(10+5)*(8-3)");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(75.0, result);
+// ========== Function Tests: tg ==========
+
+TEST_F(ArithmeticExpressionTest, TangentZero) {
+    expr->setInfixExpression("tg(0)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 0.0));
 }
 
-TEST(TPostfix, can_calculate_with_variables)
-{
-	TPostfix p("a+b");
-	p.SetOperand("a", 10);
-	p.SetOperand("b", 20);
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(30.0, result);
+TEST_F(ArithmeticExpressionTest, TangentPiOverFour) {
+    expr->setInfixExpression("tg(0.7853981633974483)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 1.0));
 }
 
-TEST(TPostfix, can_calculate_expression_with_multiple_variables)
-{
-	TPostfix p("a+b*c");
-	p.SetOperand("a", 2);
-	p.SetOperand("b", 3);
-	p.SetOperand("c", 4);
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(14.0, result);
+// ========== Function Tests: log ==========
+
+TEST_F(ArithmeticExpressionTest, LogarithmE) {
+    expr->setInfixExpression("log(2.718281828)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 1.0));
 }
 
-TEST(TPostfix, can_calculate_with_mixed_numbers_and_variables)
-{
-	TPostfix p("a+5");
-	p.SetOperand("a", 10);
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(15.0, result);
+TEST_F(ArithmeticExpressionTest, LogarithmOne) {
+    expr->setInfixExpression("log(1)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 0.0));
 }
 
-TEST(TPostfix, throws_on_division_by_zero)
-{
-	TPostfix p("10/0");
-	ASSERT_ANY_THROW(p.Calculate());
+// ========== Function Tests: exp ==========
+
+TEST_F(ArithmeticExpressionTest, ExponentialZero) {
+    expr->setInfixExpression("exp(0)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 1.0));
 }
 
-TEST(TPostfix, throws_on_unknown_operand)
-{
-	TPostfix p("a+b");
-	p.SetOperand("a", 10);
-	ASSERT_ANY_THROW(p.Calculate());
+TEST_F(ArithmeticExpressionTest, ExponentialOne) {
+    expr->setInfixExpression("exp(1)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, std::exp(1.0)));
 }
 
-// Дополнительные тесты
-TEST(TPostfix, can_handle_spaces_in_expression)
-{
-	TPostfix p("a + b * c");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a b c * + ", postfix);
+// ========== Тесты на смешанные случаи ==========
+
+TEST_F(ArithmeticExpressionTest, SinePlusCosine) {
+    expr->setInfixExpression("sin(0) + cos(0)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 1.0));
 }
 
-TEST(TPostfix, can_calculate_negative_result)
-{
-	TPostfix p("5-10");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(-5.0, result);
+TEST_F(ArithmeticExpressionTest, ComplexFunctionExpression) {
+    expr->setInfixExpression("2 * sin(0) + 3 * cos(0)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 3.0));
 }
 
-TEST(TPostfix, can_calculate_with_floating_point_numbers)
-{
-	TPostfix p("3.5+2.5");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(6.0, result);
+TEST_F(ArithmeticExpressionTest, FunctionWithPower) {
+    expr->setInfixExpression("exp(1) + 2 ^ 3");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, std::exp(1) + 8));
 }
 
-TEST(TPostfix, can_change_operand_values)
-{
-	TPostfix p("a+b");
-	p.SetOperand("a", 10);
-	p.SetOperand("b", 20);
-	EXPECT_DOUBLE_EQ(30.0, p.Calculate());
+// ========== Сложные тесты ==========
 
-	p.SetOperand("a", 5);
-	p.SetOperand("b", 15);
-	EXPECT_DOUBLE_EQ(20.0, p.Calculate());
+TEST_F(ArithmeticExpressionTest, LongExpression) {
+    expr->setInfixExpression("1 + 2 + 3 + 4 + 5");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 15.0));
 }
 
-TEST(TPostfix, can_reuse_postfix_object)
-{
-	TPostfix p("a+b");
-	p.SetOperand("a", 1);
-	p.SetOperand("b", 2);
-	EXPECT_DOUBLE_EQ(3.0, p.Calculate());
-
-	p.SetInfix("c*d");
-	p.SetOperand("c", 3);
-	p.SetOperand("d", 4);
-	EXPECT_DOUBLE_EQ(12.0, p.Calculate());
+TEST_F(ArithmeticExpressionTest, VeryComplexExpression) {
+    expr->setInfixExpression("((5 + 3) * 2 - 4 / 2) ^ 2");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 196.0));
 }
 
-TEST(TPostfix, can_calculate_long_expression)
-{
-	TPostfix p("1+2+3+4+5");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(15.0, result);
+// ========== Проверочные тесты ==========
+
+TEST_F(ArithmeticExpressionTest, ValidExpressionSimple) {
+    expr->setInfixExpression("(2 + 3)");
+    EXPECT_TRUE(expr->validate());
 }
 
-TEST(TPostfix, respects_operation_priority)
-{
-	TPostfix p("2+3*4-5");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(9.0, result); // 2 + 12 - 5 = 9
+TEST_F(ArithmeticExpressionTest, ValidExpressionNested) {
+    expr->setInfixExpression("((2 + 3) * (4 - 1))");
+    EXPECT_TRUE(expr->validate());
 }
 
-TEST(TPostfix, can_handle_multiple_parentheses_levels)
-{
-	TPostfix p("((2+3)*(4+5))");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(45.0, result);
+TEST_F(ArithmeticExpressionTest, InvalidMissingOpenParenthesis) {
+    expr->setInfixExpression("2 + 3)");
+    EXPECT_FALSE(expr->validate());
 }
 
-TEST(TPostfix, can_calculate_power_operation)
-{
-	TPostfix p("2^3");
-	double result = p.Calculate();
-	EXPECT_DOUBLE_EQ(8.0, result);
+TEST_F(ArithmeticExpressionTest, InvalidMissingCloseParenthesis) {
+    expr->setInfixExpression("(2 + 3");
+    EXPECT_FALSE(expr->validate());
 }
 
-TEST(TPostfix, power_has_higher_priority_than_multiplication)
-{
-	TPostfix p("2*3^2");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("2 3 2 ^ * ", postfix);
+TEST_F(ArithmeticExpressionTest, ValidNoParentheses) {
+    expr->setInfixExpression("2 + 3 * 4");
+    EXPECT_TRUE(expr->validate());
 }
 
-// Тесты математических функций
-TEST(TPostfix, can_convert_sin_function)
-{
-	TPostfix p("sin(a)");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a sin ", postfix);
+// ========== Тесты на исключения ==========
+
+TEST_F(ArithmeticExpressionTest, DivisionByZero) {
+    expr->setInfixExpression("5 / 0");
+    expr->convertToPostfix();
+    EXPECT_THROW(expr->calculate(), std::runtime_error);
 }
 
-TEST(TPostfix, can_convert_cos_function)
-{
-	TPostfix p("cos(a)");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a cos ", postfix);
+TEST_F(ArithmeticExpressionTest, DivisionByZeroComplex) {
+    expr->setInfixExpression("10 / (5 - 5)");
+    expr->convertToPostfix();
+    EXPECT_THROW(expr->calculate(), std::runtime_error);
 }
 
-TEST(TPostfix, can_convert_exp_function)
-{
-	TPostfix p("exp(a)");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a exp ", postfix);
+TEST_F(ArithmeticExpressionTest, LogarithmNegative) {
+    expr->setInfixExpression("log(-1)");
+    expr->convertToPostfix();
+    EXPECT_THROW(expr->calculate(), std::runtime_error);
 }
 
-TEST(TPostfix, can_convert_log_function)
-{
-	TPostfix p("log(a)");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a log ", postfix);
+TEST_F(ArithmeticExpressionTest, LogarithmZero) {
+    expr->setInfixExpression("log(0)");
+    expr->convertToPostfix();
+    EXPECT_THROW(expr->calculate(), std::runtime_error);
 }
 
-TEST(TPostfix, can_convert_tg_function)
-{
-	TPostfix p("tg(a)");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("a tg ", postfix);
+TEST_F(ArithmeticExpressionTest, MismatchedParenthesesConversion) {
+    expr->setInfixExpression("(2 + 3");
+    EXPECT_THROW(expr->convertToPostfix(), std::runtime_error);
 }
 
-TEST(TPostfix, can_calculate_sin)
-{
-	TPostfix p("sin(0)");
-	double result = p.Calculate();
-	EXPECT_NEAR(0.0, result, 1e-10);
+TEST_F(ArithmeticExpressionTest, UnknownFunction) {
+    expr->setInfixExpression("foo(5)");
+    EXPECT_THROW(expr->convertToPostfix(), std::runtime_error);
 }
 
-TEST(TPostfix, can_calculate_sin_pi_div_2)
-{
-	TPostfix p("sin(1.5707963267948966)"); // π/2
-	double result = p.Calculate();
-	EXPECT_NEAR(1.0, result, 1e-10);
+TEST_F(ArithmeticExpressionTest, EmptyPostfixCalculate) {
+    EXPECT_THROW(expr->calculate(), std::runtime_error);
 }
 
-TEST(TPostfix, can_calculate_cos)
-{
-	TPostfix p("cos(0)");
-	double result = p.Calculate();
-	EXPECT_NEAR(1.0, result, 1e-10);
+// ========== Postfix Tests ==========
+
+TEST_F(ArithmeticExpressionTest, PostfixConversionSimple) {
+    expr->setInfixExpression("2 + 3");
+    expr->convertToPostfix();
+    std::string postfix = expr->getPostfixExpression();
+    EXPECT_FALSE(postfix.empty());
 }
 
-TEST(TPostfix, can_calculate_exp)
-{
-	TPostfix p("exp(0)");
-	double result = p.Calculate();
-	EXPECT_NEAR(1.0, result, 1e-10);
+TEST_F(ArithmeticExpressionTest, PostfixWithFunction) {
+    expr->setInfixExpression("sin(0)");
+    expr->convertToPostfix();
+    std::string postfix = expr->getPostfixExpression();
+    EXPECT_NE(postfix.find("sin"), std::string::npos);
 }
 
-TEST(TPostfix, can_calculate_exp_1)
-{
-	TPostfix p("exp(1)");
-	double result = p.Calculate();
-	EXPECT_NEAR(2.71828182845904523536, result, 1e-10);
+// ========== Крайние случаи  ==========
+
+TEST_F(ArithmeticExpressionTest, SingleNumber) {
+    expr->setInfixExpression("42");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 42.0));
 }
 
-TEST(TPostfix, can_calculate_log)
-{
-	TPostfix p("log(2.71828182845904523536)"); // e
-	double result = p.Calculate();
-	EXPECT_NEAR(1.0, result, 1e-10);
+TEST_F(ArithmeticExpressionTest, ExpressionWithSpaces) {
+    expr->setInfixExpression("  2   +   3  ");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 5.0));
 }
 
-TEST(TPostfix, can_calculate_tg)
-{
-	TPostfix p("tg(0)");
-	double result = p.Calculate();
-	EXPECT_NEAR(0.0, result, 1e-10);
+TEST_F(ArithmeticExpressionTest, ChainedDivisions) {
+    expr->setInfixExpression("100 / 10 / 2");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 5.0));
 }
 
-TEST(TPostfix, can_combine_function_with_operation)
-{
-	TPostfix p("sin(0)+cos(0)");
-	double result = p.Calculate();
-	EXPECT_NEAR(1.0, result, 1e-10);
+TEST_F(ArithmeticExpressionTest, AllOperatorsInExpression) {
+    expr->setInfixExpression("2 + 3 - 4 * 5 / 2 ^ 2");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 0.0));
 }
 
-TEST(TPostfix, can_calculate_function_with_expression_argument)
-{
-	TPostfix p("sin(1+1)");
-	double result = p.Calculate();
-	EXPECT_NEAR(sin(2), result, 1e-10);
+
+
+// Тест: Недостаточно операндов для оператора
+TEST_F(ArithmeticExpressionTest, NotEnoughOperandsForOperator) {
+    expr->setInfixExpression("5 +");
+    expr->convertToPostfix();
+    EXPECT_THROW(expr->calculate(), std::runtime_error);
 }
 
-TEST(TPostfix, can_calculate_nested_functions)
-{
-	TPostfix p("sin(cos(0))");
-	double result = p.Calculate();
-	EXPECT_NEAR(sin(1), result, 1e-10);
+// Тест: Слишком много операндов (неправильное выражение)
+TEST_F(ArithmeticExpressionTest, TooManyOperands) {
+    expr->setInfixExpression("5 3");
+    expr->convertToPostfix();
+    EXPECT_THROW(expr->calculate(), std::runtime_error);
 }
 
-TEST(TPostfix, can_calculate_function_with_variable)
-{
-	TPostfix p("sin(a)");
-	p.SetOperand("a", 0);
-	double result = p.Calculate();
-	EXPECT_NEAR(0.0, result, 1e-10);
+// Тест: Парсинг десятичного числа с точкой
+TEST_F(ArithmeticExpressionTest, DecimalWithDot) {
+    expr->setInfixExpression("1.5");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 1.5));
 }
 
-TEST(TPostfix, can_multiply_function_result)
-{
-	TPostfix p("2*sin(0)");
-	double result = p.Calculate();
-	EXPECT_NEAR(0.0, result, 1e-10);
+// Тест: Сложное десятичное число
+TEST_F(ArithmeticExpressionTest, ComplexDecimalParsing) {
+    expr->setInfixExpression("0.123 + 0.456");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 0.579));
 }
 
-TEST(TPostfix, can_add_function_results)
-{
-	TPostfix p("sin(0)+cos(0)+exp(0)");
-	double result = p.Calculate();
-	EXPECT_NEAR(2.0, result, 1e-10); // 0 + 1 + 1 = 2
+// Тест: Скобки без функции
+TEST_F(ArithmeticExpressionTest, ParenthesesWithoutFunction) {
+    expr->setInfixExpression("(5 + 3) + 2");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 10.0));
 }
 
-TEST(TPostfix, throws_on_log_of_zero)
-{
-	TPostfix p("log(0)");
-	ASSERT_ANY_THROW(p.Calculate());
+// Тест: Множественные функции в скобках
+TEST_F(ArithmeticExpressionTest, MultipleFunctionsInParentheses) {
+    expr->setInfixExpression("sin(0) + (cos(0) + 1)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 2.0));
 }
 
-TEST(TPostfix, throws_on_log_of_negative)
-{
-	TPostfix p("log(-1)");
-	ASSERT_ANY_THROW(p.Calculate());
+// Тест: Вложенные функции
+TEST_F(ArithmeticExpressionTest, NestedFunctions) {
+    expr->setInfixExpression("sin(cos(0))");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, std::sin(1.0)));
 }
 
-TEST(TPostfix, can_calculate_complex_expression_with_functions)
-{
-	TPostfix p("2*sin(0)+3*cos(0)");
-	double result = p.Calculate();
-	EXPECT_NEAR(3.0, result, 1e-10); // 2*0 + 3*1 = 3
+// Тест: Функция с вычисляемым аргументом
+TEST_F(ArithmeticExpressionTest, FunctionWithComputedArgument) {
+    expr->setInfixExpression("sin(2 * 3)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, std::sin(6.0)));
 }
 
-TEST(TPostfix, can_use_tan_instead_of_tg)
-{
-	TPostfix p("tan(0)");
-	string postfix = p.ToPostfix();
-	EXPECT_EQ("0 tan ", postfix);
+// Тест: Парсинг числа в конце выражения
+TEST_F(ArithmeticExpressionTest, NumberAtEnd) {
+    expr->setInfixExpression("5.5");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 5.5));
 }
 
-TEST(TPostfix, function_works_in_complex_expression)
-{
-	TPostfix p("(sin(0)+1)*2");
-	double result = p.Calculate();
-	EXPECT_NEAR(2.0, result, 1e-10); // (0+1)*2 = 2
+// Тест: Несколько операторов подряд с разным приоритетом
+TEST_F(ArithmeticExpressionTest, MixedPrecedenceOperators) {
+    expr->setInfixExpression("10 - 5 * 2 + 3");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 3.0));
+}
+
+// Тест: Степень с отрицательным результатом
+TEST_F(ArithmeticExpressionTest, PowerWithNegativeBase) {
+    expr->setInfixExpression("2 ^ 2 ^ 2");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 16.0));
+}
+
+// Тест: Валидация - скобки закрываются раньше открытия
+TEST_F(ArithmeticExpressionTest, ValidationClosingBeforeOpening) {
+    expr->setInfixExpression(")2 + 3(");
+    EXPECT_FALSE(expr->validate());
+}
+
+// Тест: Пустое выражение
+TEST_F(ArithmeticExpressionTest, EmptyExpression) {
+    expr->setInfixExpression("");
+    EXPECT_TRUE(expr->validate());
+}
+
+// Тест: Выражение только из пробелов
+TEST_F(ArithmeticExpressionTest, OnlySpaces) {
+    expr->setInfixExpression("     ");
+    expr->convertToPostfix();
+    EXPECT_THROW(expr->calculate(), std::runtime_error);
+}
+
+// Тест: Число с несколькими десятичными точками (только первая учитывается)
+TEST_F(ArithmeticExpressionTest, MultipleDecimalPoints) {
+    expr->setInfixExpression("3.14.15");
+    expr->convertToPostfix();
+    // Должно обработать только 3.14, остальное - ошибка
+}
+
+// Тест: Оператор в начале (после преобразования может вызвать ошибку)
+TEST_F(ArithmeticExpressionTest, OperatorAtStart) {
+    expr->setInfixExpression("+ 5");
+    expr->convertToPostfix();
+    EXPECT_THROW(expr->calculate(), std::runtime_error);
+}
+
+// Тест: Все функции с ненулевыми аргументами
+TEST_F(ArithmeticExpressionTest, AllFunctionsNonZero) {
+    expr->setInfixExpression("sin(1) + cos(1) + tg(1) + log(2) + exp(1)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    double expected = std::sin(1) + std::cos(1) + std::tan(1) + std::log(2) + std::exp(1);
+    EXPECT_TRUE(areEqual(result, expected));
+}
+
+// Тест: Длинная последовательность операций одного приоритета
+TEST_F(ArithmeticExpressionTest, LongSequenceSamePriority) {
+    expr->setInfixExpression("2 + 2 + 2 + 2 + 2");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 10.0));
+}
+
+// Тест: Очень вложенные скобки
+TEST_F(ArithmeticExpressionTest, DeeplyNestedParentheses) {
+    expr->setInfixExpression("((((1 + 2))))");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 3.0));
+}
+
+// Тест: Проверка getPrecedence для неизвестного оператора
+TEST_F(ArithmeticExpressionTest, UnknownOperatorInExpression) {
+    expr->setInfixExpression("5 $ 3");
+    expr->convertToPostfix();
+    // $ не является оператором, будет обработан как ошибка или пропущен
+}
+
+// Тест: Функция внутри другой функции
+TEST_F(ArithmeticExpressionTest, FunctionInsideFunction) {
+    expr->setInfixExpression("exp(log(5))");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 5.0));
+}
+
+// Тест: Скобки вокруг одного числа
+TEST_F(ArithmeticExpressionTest, ParenthesesAroundNumber) {
+    expr->setInfixExpression("(42)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 42.0));
+}
+
+// Тест: Несколько пар скобок подряд
+TEST_F(ArithmeticExpressionTest, MultipleBracketPairs) {
+    expr->setInfixExpression("(1 + 2) + (3 + 4) + (5 + 6)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 21.0));
+}
+
+// Тест: Операция деления с десятичным результатом
+TEST_F(ArithmeticExpressionTest, DivisionWithDecimalResult) {
+    expr->setInfixExpression("10 / 4");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 2.5));
+}
+
+// Тест: Большое число
+TEST_F(ArithmeticExpressionTest, LargeNumber) {
+    expr->setInfixExpression("123456 + 654321");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 777777.0));
+}
+
+// Тест: Ноль в разных операциях
+TEST_F(ArithmeticExpressionTest, ZeroInOperations) {
+    expr->setInfixExpression("0 + 0 * 0 + 5");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 5.0));
+}
+
+// Тест: Минимальное десятичное число
+TEST_F(ArithmeticExpressionTest, SmallDecimal) {
+    expr->setInfixExpression("0.0001 + 0.0002");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 0.0003));
+}
+
+// Тест: Постфикс содержит правильные элементы
+TEST_F(ArithmeticExpressionTest, PostfixContainsCorrectElements) {
+    expr->setInfixExpression("2 + 3 * 4");
+    expr->convertToPostfix();
+    std::string postfix = expr->getPostfixExpression();
+    EXPECT_NE(postfix.find("2"), std::string::npos);
+    EXPECT_NE(postfix.find("3"), std::string::npos);
+    EXPECT_NE(postfix.find("4"), std::string::npos);
+    EXPECT_NE(postfix.find("*"), std::string::npos);
+    EXPECT_NE(postfix.find("+"), std::string::npos);
+}
+
+// Тест: Открывающая скобка без закрывающей (ошибка конвертации)
+TEST_F(ArithmeticExpressionTest, UnclosedParenthesisInConversion) {
+    expr->setInfixExpression("((2 + 3)");
+    EXPECT_THROW(expr->convertToPostfix(), std::runtime_error);
+}
+
+// Тест: Закрывающая скобка без открывающей (ошибка конвертации)
+TEST_F(ArithmeticExpressionTest, UnmatchedClosingParenthesis) {
+    expr->setInfixExpression("2 + 3))");
+    EXPECT_THROW(expr->convertToPostfix(), std::runtime_error);
+}
+
+// Тест: Все операторы с правильным приоритетом
+TEST_F(ArithmeticExpressionTest, AllOperatorsPrecedence) {
+    expr->setInfixExpression("1 + 2 * 3 ^ 2 - 4 / 2");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, 17.0)); // 1 + 2*9 - 2 = 17
+}
+
+// Тест: Функция log с большим числом
+TEST_F(ArithmeticExpressionTest, LogLargeNumber) {
+    expr->setInfixExpression("log(100)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, std::log(100)));
+}
+
+// Тест: Функция exp с большим числом
+TEST_F(ArithmeticExpressionTest, ExpLargeArgument) {
+    expr->setInfixExpression("exp(5)");
+    expr->convertToPostfix();
+    double result = expr->calculate();
+    EXPECT_TRUE(areEqual(result, std::exp(5)));
 }

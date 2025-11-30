@@ -1,136 +1,87 @@
-// UNN, VMK, Course "Programming Methods-2", C++, OOP
-//
-// stack.h - Copyright (c) Gergel V.P. 07.05.2001
-//   Revised for Microsoft Visual Studio 2008 by Sysoev A.V. (19.04.2015)
-//
-// Stack based on dynamic array
+#ifndef STACK_H
+#define STACK_H
 
-#ifndef __STACK_H__
-#define __STACK_H__
+#include <stdexcept>
 
-const int MaxStackSize = 100;
+template <typename T>
+class Stack {
+private:
+    T* data;
+    int capacity;
+    int topIndex;
 
-template <class T>
-class TStack
-{
-    T* pMem;
-    int Size;
-    int Top;
-public:
-    TStack(int s = 10);
-    TStack(const TStack& st);
-    ~TStack();
-
-    TStack& operator=(const TStack& st);
-
-    bool operator==(const TStack& st) const;
-    bool operator!=(const TStack& st) const;
-
-    bool IsEmpty() const { return Top == -1; }
-    bool IsFull() const { return Top == Size - 1; }
-
-    void Push(const T& val);
-    T Pop();
-    T GetTop() const;
-
-    int GetSize() const { return Size; }
-    int GetCount() const { return Top + 1; }
-
-    void Clear() { Top = -1; }
-};
-
-template <class T>
-TStack<T>::TStack(int s)
-{
-    if (s <= 0 || s > MaxStackSize)
-        throw "Invalid stack size";
-
-    Size = s;
-    Top = -1;
-    pMem = new T[Size];
-}
-
-template <class T>
-TStack<T>::TStack(const TStack<T>& st)
-{
-    Size = st.Size;
-    Top = st.Top;
-    pMem = new T[Size];
-
-    for (int i = 0; i <= Top; i++)
-        pMem[i] = st.pMem[i];
-}
-
-template <class T>
-TStack<T>::~TStack()
-{
-    delete[] pMem;
-}
-
-template <class T>
-TStack<T>& TStack<T>::operator=(const TStack<T>& st)
-{
-    if (this == &st)
-        return *this;
-
-    if (Size != st.Size)
-    {
-        delete[] pMem;
-        Size = st.Size;
-        pMem = new T[Size];
+    void resize() {
+        int newCapacity = capacity * 2;
+        T* newData = new T[newCapacity];
+        for (int i = 0; i <= topIndex; i++) {
+            newData[i] = data[i];
+        }
+        delete[] data;
+        data = newData;
+        capacity = newCapacity;
     }
 
-    Top = st.Top;
-    for (int i = 0; i <= Top; i++)
-        pMem[i] = st.pMem[i];
+public:
+    Stack(int initialCapacity = 10) : capacity(initialCapacity), topIndex(-1) {
+        data = new T[capacity];
+    }
 
-    return *this;
-}
+    ~Stack() {
+        delete[] data;
+    }
 
-template <class T>
-bool TStack<T>::operator==(const TStack<T>& st) const
-{
-    if (Size != st.Size || Top != st.Top)
-        return false;
+    Stack(const Stack& other) : capacity(other.capacity), topIndex(other.topIndex) {
+        data = new T[capacity];
+        for (int i = 0; i <= topIndex; i++) {
+            data[i] = other.data[i];
+        }
+    }
 
-    for (int i = 0; i <= Top; i++)
-        if (pMem[i] != st.pMem[i])
-            return false;
+    Stack& operator=(const Stack& other) {
+        if (this != &other) {
+            delete[] data;
+            capacity = other.capacity;
+            topIndex = other.topIndex;
+            data = new T[capacity];
+            for (int i = 0; i <= topIndex; i++) {
+                data[i] = other.data[i];
+            }
+        }
+        return *this;
+    }
 
-    return true;
-}
+    void push(const T& value) {
+        if (topIndex + 1 >= capacity) {
+            resize();
+        }
+        data[++topIndex] = value;
+    }
 
-template <class T>
-bool TStack<T>::operator!=(const TStack<T>& st) const
-{
-    return !(*this == st);
-}
+    T pop() {
+        if (isEmpty()) {
+            throw std::runtime_error("Stack is empty");
+        }
+        return data[topIndex--];
+    }
 
-template <class T>
-void TStack<T>::Push(const T& val)
-{
-    if (IsFull())
-        throw "Stack overflow";
+    T top() const {
+        if (isEmpty()) {
+            throw std::runtime_error("Stack is empty");
+        }
+        return data[topIndex];
+    }
 
-    pMem[++Top] = val;
-}
+    bool isEmpty() const {
+        return topIndex == -1;
+    }
 
-template <class T>
-T TStack<T>::Pop()
-{
-    if (IsEmpty())
-        throw "Stack underflow";
+    int size() const {
+        return topIndex + 1;
+    }
 
-    return pMem[Top--];
-}
+    void clear() {
+        topIndex = -1;
+    }
+};
 
-template <class T>
-T TStack<T>::GetTop() const
-{
-    if (IsEmpty())
-        throw "Stack is empty";
-
-    return pMem[Top];
-}
-
-#endif
+#endif // STACK_H

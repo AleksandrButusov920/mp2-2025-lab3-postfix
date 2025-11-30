@@ -1,324 +1,337 @@
 #include "stack.h"
 #include <gtest.h>
+#include <string>
 
-// Тесты конструкторов
-TEST(TStack, can_create_stack_with_positive_size)
-{
-    ASSERT_NO_THROW(TStack<int> st(10));
+// Тест: Создание стека с конструктором по умолчанию
+TEST(StackTest, DefaultConstructor) {
+    Stack<int> s;
+    EXPECT_TRUE(s.isEmpty());
+    EXPECT_EQ(s.size(), 0);
 }
 
-TEST(TStack, throws_when_create_stack_with_negative_size)
-{
-    ASSERT_ANY_THROW(TStack<int> st(-5));
+// Тест: Создание стека с заданной начальной ёмкостью
+TEST(StackTest, CustomCapacityConstructor) {
+    Stack<int> s(5);
+    EXPECT_TRUE(s.isEmpty());
+    EXPECT_EQ(s.size(), 0);
 }
 
-TEST(TStack, throws_when_create_too_large_stack)
-{
-    ASSERT_ANY_THROW(TStack<int> st(MaxStackSize + 1));
+// Тест: Добавление одного элемента
+TEST(StackTest, PushSingleElement) {
+    Stack<int> s;
+    s.push(10);
+    EXPECT_FALSE(s.isEmpty());
+    EXPECT_EQ(s.size(), 1);
 }
 
-TEST(TStack, can_create_copied_stack)
-{
-    TStack<int> st1(10);
-    ASSERT_NO_THROW(TStack<int> st2(st1));
+// Тест: Добавление нескольких элементов
+TEST(StackTest, PushMultipleElements) {
+    Stack<int> s;
+    for (int i = 1; i <= 5; i++) {
+        s.push(i * 10);
+    }
+    EXPECT_EQ(s.size(), 5);
+    EXPECT_EQ(s.top(), 50);
 }
 
-TEST(TStack, copied_stack_is_equal_to_source_one)
-{
-    TStack<int> st1(10);
-    st1.Push(5);
-    st1.Push(10);
+// Тест: Операция извлечения элемента
+TEST(StackTest, PopOperation) {
+    Stack<int> s;
+    s.push(10);
+    s.push(20);
+    s.push(30);
 
-    TStack<int> st2(st1);
-
-    EXPECT_EQ(st1, st2);
+    EXPECT_EQ(s.pop(), 30);
+    EXPECT_EQ(s.size(), 2);
+    EXPECT_EQ(s.pop(), 20);
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_EQ(s.pop(), 10);
+    EXPECT_TRUE(s.isEmpty());
 }
 
-TEST(TStack, copied_stack_has_its_own_memory)
-{
-    TStack<int> st1(10);
-    st1.Push(5);
+// Тест: Операция просмотра верхнего элемента без изменения стека
+TEST(StackTest, TopOperation) {
+    Stack<int> s;
+    s.push(100);
 
-    TStack<int> st2(st1);
-    st2.Push(10);
-
-    EXPECT_NE(st1, st2);
+    EXPECT_EQ(s.top(), 100);
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_EQ(s.top(), 100);
 }
 
-// Тесты методов IsEmpty и IsFull
-TEST(TStack, new_stack_is_empty)
-{
-    TStack<int> st(5);
-    EXPECT_TRUE(st.IsEmpty());
+// Тест: Top для стека с double значениями
+TEST(StackTest, TopWithDouble) {
+    Stack<double> s;
+    s.push(3.14159);
+    s.push(2.71828);
+
+    EXPECT_DOUBLE_EQ(s.top(), 2.71828);
+    EXPECT_EQ(s.size(), 2);
 }
 
-TEST(TStack, stack_with_elements_is_not_empty)
-{
-    TStack<int> st(5);
-    st.Push(1);
-    EXPECT_FALSE(st.IsEmpty());
+// Тест: Автоматическое увеличение размера при превышении ёмкости
+TEST(StackTest, AutomaticResize) {
+    Stack<int> s(2);
+
+    for (int i = 1; i <= 25; i++) {
+        s.push(i);
+    }
+
+    EXPECT_EQ(s.size(), 25);
+    EXPECT_EQ(s.top(), 25);
+
+    for (int i = 25; i >= 1; i--) {
+        EXPECT_EQ(s.pop(), i);
+    }
 }
 
-TEST(TStack, full_stack_is_full)
-{
-    TStack<int> st(3);
-    st.Push(1);
-    st.Push(2);
-    st.Push(3);
-    EXPECT_TRUE(st.IsFull());
+// Тест: Копирующий конструктор
+TEST(StackTest, CopyConstructor) {
+    Stack<int> s1;
+    s1.push(1);
+    s1.push(2);
+    s1.push(3);
+
+    Stack<int> s2(s1);
+
+    EXPECT_EQ(s2.size(), 3);
+    EXPECT_EQ(s2.top(), 3);
+
+    s2.pop();
+    EXPECT_EQ(s2.size(), 2);
+    EXPECT_EQ(s1.size(), 3);
+    EXPECT_EQ(s1.top(), 3);
 }
 
-TEST(TStack, not_full_stack_is_not_full)
-{
-    TStack<int> st(5);
-    st.Push(1);
-    EXPECT_FALSE(st.IsFull());
+// Тест: Оператор присваивания
+TEST(StackTest, AssignmentOperator) {
+    Stack<int> s1;
+    s1.push(10);
+    s1.push(20);
+    s1.push(30);
+
+    Stack<int> s2;
+    s2.push(100);
+
+    s2 = s1;
+
+    EXPECT_EQ(s2.size(), 3);
+    EXPECT_EQ(s2.top(), 30);
+
+    s2.pop();
+    EXPECT_EQ(s2.size(), 2);
+    EXPECT_EQ(s1.size(), 3);
 }
 
-// Тесты Push
-TEST(TStack, can_push_element)
-{
-    TStack<int> st(5);
-    ASSERT_NO_THROW(st.Push(10));
+// Тест: Самоприсваивание
+TEST(StackTest, SelfAssignment) {
+    Stack<int> s;
+    s.push(1);
+    s.push(2);
+
+    s = s;
+
+    EXPECT_EQ(s.size(), 2);
+    EXPECT_EQ(s.top(), 2);
 }
 
-TEST(TStack, throws_when_push_to_full_stack)
-{
-    TStack<int> st(2);
-    st.Push(1);
-    st.Push(2);
-    ASSERT_ANY_THROW(st.Push(3));
+// Тест: Операция очистки
+TEST(StackTest, ClearOperation) {
+    Stack<int> s;
+    for (int i = 0; i < 15; i++) {
+        s.push(i);
+    }
+
+    EXPECT_EQ(s.size(), 15);
+    s.clear();
+    EXPECT_TRUE(s.isEmpty());
+    EXPECT_EQ(s.size(), 0);
+
+    s.push(42);
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_EQ(s.top(), 42);
 }
 
-TEST(TStack, can_push_multiple_elements)
-{
-    TStack<int> st(5);
-    ASSERT_NO_THROW(st.Push(1));
-    ASSERT_NO_THROW(st.Push(2));
-    ASSERT_NO_THROW(st.Push(3));
+// Тест: Стек со строками
+TEST(StackTest, StringOperations) {
+    Stack<std::string> s;
+
+    s.push("Hello");
+    s.push("World");
+    s.push("!");
+
+    EXPECT_EQ(s.size(), 3);
+    EXPECT_EQ(s.pop(), "!");
+    EXPECT_EQ(s.pop(), "World");
+    EXPECT_EQ(s.pop(), "Hello");
+    EXPECT_TRUE(s.isEmpty());
 }
 
-// Тесты Pop
-TEST(TStack, can_pop_element)
-{
-    TStack<int> st(5);
-    st.Push(10);
-    ASSERT_NO_THROW(st.Pop());
+// Тест: Стек с символами
+TEST(StackTest, CharOperations) {
+    Stack<char> s;
+
+    s.push('A');
+    s.push('B');
+    s.push('C');
+
+    EXPECT_EQ(s.top(), 'C');
+    EXPECT_EQ(s.pop(), 'C');
+    EXPECT_EQ(s.pop(), 'B');
+    EXPECT_EQ(s.pop(), 'A');
 }
 
-TEST(TStack, throws_when_pop_from_empty_stack)
-{
-    TStack<int> st(5);
-    ASSERT_ANY_THROW(st.Pop());
+// Тест: Pop из пустого стека выбрасывает исключение
+TEST(StackTest, PopEmptyStackException) {
+    Stack<int> s;
+    EXPECT_THROW(s.pop(), std::runtime_error);
 }
 
-TEST(TStack, pop_returns_last_pushed_element)
-{
-    TStack<int> st(5);
-    st.Push(10);
-    EXPECT_EQ(10, st.Pop());
+// Тест: Top на пустом стеке выбрасывает исключение
+TEST(StackTest, TopEmptyStackException) {
+    Stack<int> s;
+    EXPECT_THROW(s.top(), std::runtime_error);
 }
 
-TEST(TStack, pop_follows_lifo_order)
-{
-    TStack<int> st(5);
-    st.Push(1);
-    st.Push(2);
-    st.Push(3);
+// Тест: Множественные исключения
+TEST(StackTest, MultipleExceptions) {
+    Stack<int> s;
 
-    EXPECT_EQ(3, st.Pop());
-    EXPECT_EQ(2, st.Pop());
-    EXPECT_EQ(1, st.Pop());
+    EXPECT_THROW(s.pop(), std::runtime_error);
+    EXPECT_THROW(s.top(), std::runtime_error);
+
+    s.push(1);
+    EXPECT_NO_THROW(s.pop());
+
+    EXPECT_THROW(s.pop(), std::runtime_error);
 }
 
-// Тесты GetTop
-TEST(TStack, can_get_top_element)
-{
-    TStack<int> st(5);
-    st.Push(10);
-    ASSERT_NO_THROW(st.GetTop());
+// Тест: Большое количество операций (нагрузочный тест)
+TEST(StackTest, StressTest) {
+    Stack<int> s;
+    const int iterations = 1000;
+
+    for (int i = 0; i < iterations; i++) {
+        s.push(i);
+    }
+
+    EXPECT_EQ(s.size(), iterations);
+
+    for (int i = iterations - 1; i >= 0; i--) {
+        EXPECT_EQ(s.pop(), i);
+    }
+
+    EXPECT_TRUE(s.isEmpty());
 }
 
-TEST(TStack, throws_when_get_top_from_empty_stack)
-{
-    TStack<int> st(5);
-    ASSERT_ANY_THROW(st.GetTop());
+// Тест: Чередующиеся операции push и pop
+TEST(StackTest, AlternatingOperations) {
+    Stack<int> s;
+
+    s.push(1);
+    EXPECT_EQ(s.pop(), 1);
+    s.push(2);
+    s.push(3);
+    EXPECT_EQ(s.pop(), 3);
+    s.push(4);
+    EXPECT_EQ(s.size(), 2);
 }
 
-TEST(TStack, top_returns_last_pushed_element)
-{
-    TStack<int> st(5);
-    st.Push(10);
-    st.Push(20);
-    EXPECT_EQ(20, st.GetTop());
+// Тест: Консистентность проверки isEmpty
+TEST(StackTest, IsEmptyConsistency) {
+    Stack<int> s;
+
+    EXPECT_TRUE(s.isEmpty());
+    s.push(1);
+    EXPECT_FALSE(s.isEmpty());
+    s.pop();
+    EXPECT_TRUE(s.isEmpty());
 }
 
-TEST(TStack, top_does_not_remove_element)
-{
-    TStack<int> st(5);
-    st.Push(10);
-    st.GetTop();
-    EXPECT_EQ(10, st.GetTop());
+// Тест: Консистентность размера
+TEST(StackTest, SizeConsistency) {
+    Stack<int> s;
+
+    EXPECT_EQ(s.size(), 0);
+    for (int i = 0; i < 10; i++) {
+        s.push(i);
+        EXPECT_EQ(s.size(), i + 1);
+    }
+    for (int i = 9; i >= 0; i--) {
+        EXPECT_EQ(s.size(), i + 1);
+        s.pop();
+    }
+    EXPECT_EQ(s.size(), 0);
 }
 
-// Тесты GetSize и GetCount
-TEST(TStack, can_get_size)
-{
-    TStack<int> st(10);
-    EXPECT_EQ(10, st.GetSize());
+// Тест: Копирующий конструктор с пустым стеком
+TEST(StackTest, CopyConstructorEmptyStack) {
+    Stack<int> s1;
+    Stack<int> s2(s1);
+
+    EXPECT_TRUE(s2.isEmpty());
+    EXPECT_EQ(s2.size(), 0);
 }
 
-TEST(TStack, can_get_count)
-{
-    TStack<int> st(10);
-    st.Push(1);
-    st.Push(2);
-    EXPECT_EQ(2, st.GetCount());
+// Тест: Присваивание пустого стека
+TEST(StackTest, AssignmentEmptyStack) {
+    Stack<int> s1;
+    s1.push(1);
+
+    Stack<int> s2;
+    s1 = s2;
+
+    EXPECT_TRUE(s1.isEmpty());
 }
 
-TEST(TStack, empty_stack_has_count_zero)
-{
-    TStack<int> st(10);
-    EXPECT_EQ(0, st.GetCount());
+// Тест: Push после очистки
+TEST(StackTest, PushAfterClear) {
+    Stack<int> s;
+    s.push(1);
+    s.push(2);
+    s.clear();
+    s.push(3);
+
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_EQ(s.top(), 3);
 }
 
-// Тесты Clear
-TEST(TStack, can_clear_stack)
-{
-    TStack<int> st(10);
-    st.Push(1);
-    st.Push(2);
-    st.Clear();
-    EXPECT_TRUE(st.IsEmpty());
+// Тест: Множественная очистка
+TEST(StackTest, MultipleClear) {
+    Stack<int> s;
+    s.push(1);
+    s.clear();
+    s.clear();
+
+    EXPECT_TRUE(s.isEmpty());
 }
 
-TEST(TStack, clear_does_not_change_size)
-{
-    TStack<int> st(10);
-    st.Push(1);
-    st.Clear();
-    EXPECT_EQ(10, st.GetSize());
+// Тест: Конструктор с большой начальной ёмкостью
+TEST(StackTest, LargeCapacityConstructor) {
+    Stack<int> s(1000);
+    EXPECT_TRUE(s.isEmpty());
+    s.push(42);
+    EXPECT_EQ(s.top(), 42);
 }
 
-// Тесты оператора присваивания
-TEST(TStack, can_assign_stack_to_itself)
-{
-    TStack<int> st(5);
-    st.Push(10);
-    ASSERT_NO_THROW(st = st);
+// Тест: Стек с отрицательными числами
+TEST(StackTest, NegativeNumbers) {
+    Stack<int> s;
+    s.push(-10);
+    s.push(-20);
+    s.push(-30);
+
+    EXPECT_EQ(s.pop(), -30);
+    EXPECT_EQ(s.pop(), -20);
+    EXPECT_EQ(s.pop(), -10);
 }
 
-TEST(TStack, can_assign_stacks_of_equal_size)
-{
-    TStack<int> st1(5), st2(5);
-    st1.Push(10);
-    st2 = st1;
-    EXPECT_EQ(st1, st2);
-}
+// Тест: Стек с нулём
+TEST(StackTest, WithZero) {
+    Stack<int> s;
+    s.push(0);
 
-TEST(TStack, can_assign_stacks_of_different_size)
-{
-    TStack<int> st1(5), st2(10);
-    st1.Push(10);
-    ASSERT_NO_THROW(st2 = st1);
-}
-
-TEST(TStack, assign_operator_changes_stack_size)
-{
-    TStack<int> st1(5), st2(10);
-    st2 = st1;
-    EXPECT_EQ(5, st2.GetSize());
-}
-
-TEST(TStack, assigned_stack_is_independent)
-{
-    TStack<int> st1(5), st2(5);
-    st1.Push(10);
-    st2 = st1;
-    st2.Push(20);
-    EXPECT_NE(st1, st2);
-}
-
-// Тесты операторов сравнения
-TEST(TStack, equal_stacks_are_equal)
-{
-    TStack<int> st1(5), st2(5);
-    st1.Push(1);
-    st1.Push(2);
-    st2.Push(1);
-    st2.Push(2);
-    EXPECT_TRUE(st1 == st2);
-}
-
-TEST(TStack, stack_equals_itself)
-{
-    TStack<int> st(5);
-    st.Push(10);
-    EXPECT_TRUE(st == st);
-}
-
-TEST(TStack, stacks_with_different_sizes_are_not_equal)
-{
-    TStack<int> st1(5), st2(10);
-    EXPECT_FALSE(st1 == st2);
-}
-
-TEST(TStack, stacks_with_different_elements_are_not_equal)
-{
-    TStack<int> st1(5), st2(5);
-    st1.Push(1);
-    st2.Push(2);
-    EXPECT_FALSE(st1 == st2);
-}
-
-TEST(TStack, not_equal_operator_works)
-{
-    TStack<int> st1(5), st2(5);
-    st1.Push(1);
-    st2.Push(2);
-    EXPECT_TRUE(st1 != st2);
-}
-
-// Дополнительные тесты
-TEST(TStack, can_push_and_pop_many_times)
-{
-    TStack<int> st(5);
-
-    for (int i = 0; i < 5; i++)
-        st.Push(i);
-
-    for (int i = 4; i >= 0; i--)
-        EXPECT_EQ(i, st.Pop());
-
-    EXPECT_TRUE(st.IsEmpty());
-}
-
-TEST(TStack, can_work_with_double)
-{
-    TStack<double> st(5);
-    st.Push(3.14);
-    EXPECT_DOUBLE_EQ(3.14, st.Pop());
-}
-
-TEST(TStack, can_work_with_char)
-{
-    TStack<char> st(5);
-    st.Push('A');
-    st.Push('B');
-    EXPECT_EQ('B', st.Pop());
-    EXPECT_EQ('A', st.Pop());
-}
-
-TEST(TStack, multiple_push_and_pop_operations)
-{
-    TStack<int> st(10);
-
-    st.Push(1);
-    st.Push(2);
-    EXPECT_EQ(2, st.Pop());
-    st.Push(3);
-    st.Push(4);
-    EXPECT_EQ(4, st.Pop());
-    EXPECT_EQ(3, st.Pop());
-    EXPECT_EQ(1, st.Pop());
+    EXPECT_EQ(s.top(), 0);
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_EQ(s.pop(), 0);
 }

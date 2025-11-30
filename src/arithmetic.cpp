@@ -1,282 +1,247 @@
-// ННГУ, ВМК, Курс "Методы программирования-2", С++, ООП
-//
-// postfix.cpp - Copyright (c) Гергель В.П. 07.05.2001
-//   Переработано для Microsoft Visual Studio 2008 Сысоевым А.В. (19.04.2015)
-//
-// Постфиксная форма выражения - реализация
-
-#include "arithmetic.h"
-#include <cctype>
-#include <sstream>
+п»ї#include "arithmetic.h"
 #include <cmath>
+#include <stdexcept>
 
-TPostfix::TPostfix(const string& expr) : infix(expr)
-{
-    priority['('] = 0;
-    priority[')'] = 1;
-    priority['+'] = 2;
-    priority['-'] = 2;
-    priority['*'] = 3;
-    priority['/'] = 3;
-    priority['^'] = 4;
+ArithmeticExpression::ArithmeticExpression() : infixExpression(""), postfixExpression("") {}
+
+ArithmeticExpression::ArithmeticExpression(const std::string& expr) : infixExpression(expr), postfixExpression("") {
+    convertToPostfix();
 }
 
-void TPostfix::SetInfix(const string& expr)
-{
-    infix = expr;
-    postfix = "";
-    operands.clear();
+void ArithmeticExpression::setInfixExpression(const std::string& expr) {
+    infixExpression = expr;
+    postfixExpression = "";
 }
 
-int TPostfix::GetPriority(char op) const
-{
-    auto it = priority.find(op);
-    if (it != priority.end())
-        return it->second;
-    return -1;
+std::string ArithmeticExpression::getInfixExpression() const {
+    return infixExpression;
 }
 
-bool TPostfix::IsOperation(char c) const
-{
+std::string ArithmeticExpression::getPostfixExpression() const {
+    return postfixExpression;
+}
+
+bool ArithmeticExpression::isOperator(char c) const {
     return c == '+' || c == '-' || c == '*' || c == '/' || c == '^';
 }
 
-bool TPostfix::IsOperand(char c) const
-{
-    return isalpha(c) || isdigit(c) || c == '.';
+bool ArithmeticExpression::isFunction(const std::string& token) const {
+    return token == "sin" || token == "cos" || token == "tg" ||
+        token == "log" || token == "exp";
 }
 
-bool TPostfix::IsFunction(const string& s) const
-{
-    return s == "sin" || s == "cos" || s == "exp" ||
-        s == "log" || s == "tg" || s == "tan";
+int ArithmeticExpression::getPrecedence(char op) const {
+    if (op == '+' || op == '-') return 1;
+    if (op == '*' || op == '/') return 2;
+    if (op == '^') return 3;
+    return 0;
 }
 
-string TPostfix::ToPostfix()
-{
-    TStack<string> stack(100);
-    postfix = "";
+bool ArithmeticExpression::isDigit(char c) const {
+    return c >= '0' && c <= '9';
+}
 
-    string token = "";
+bool ArithmeticExpression::isLetter(char c) const {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
 
-    for (size_t i = 0; i < infix.length(); i++)
-    {
-        char c = infix[i];
+std::string ArithmeticExpression::extractNumber(const std::string& expr, int& pos) const {
+    std::string number = "";
+    bool hasDecimal = false;
 
-        // Пропускаем пробелы
-        if (c == ' ')
-            continue;
-
-        // Если это буква - может быть функция или переменная
-        if (isalpha(c))
-        {
-            token += c;
-
-            // Читаем полное имя
-            while (i + 1 < infix.length() && isalpha(infix[i + 1]))
-            {
-                i++;
-                token += infix[i];
-            }
-
-            // Проверяем, функция ли это
-            if (IsFunction(token))
-            {
-                stack.Push(token);
-            }
-            else
-            {
-                // Это переменная
-                postfix += token + " ";
-            }
-            token = "";
+    while (pos < expr.length() && (isDigit(expr[pos]) || expr[pos] == '.')) {
+        if (expr[pos] == '.') {
+            if (hasDecimal) break;
+            hasDecimal = true;
         }
-        // Если это цифра
-        else if (isdigit(c) || c == '.')
-        {
-            token += c;
+        number += expr[pos];
+        pos++;
+    }
+    pos--;
+    return number;
+}
 
-            // Читаем полное число
-            while (i + 1 < infix.length() && (isdigit(infix[i + 1]) || infix[i + 1] == '.'))
-            {
-                i++;
-                token += infix[i];
-            }
+std::string ArithmeticExpression::extractToken(const std::string& expr, int& pos) const {
+    std::string token = "";
 
-            postfix += token + " ";
-            token = "";
+    while (pos < expr.length() && isLetter(expr[pos])) {
+        token += expr[pos];
+        pos++;
+    }
+    pos--;
+    return token;
+}
+
+void ArithmeticExpression::convertToPostfix() {
+    Stack<char> operators;
+    Stack<std::string> functions;
+    postfixExpression = "";
+
+    for (int i = 0; i < infixExpression.length(); i++) {
+        char c = infixExpression[i];
+
+        if (c == ' ') continue;
+
+        if (isDigit(c)) {
+            postfixExpression += extractNumber(infixExpression, i);
+            postfixExpression += ' ';
         }
-        // Открывающая скобка
-        else if (c == '(')
-        {
-            stack.Push(string(1, c));
-        }
-        // Закрывающая скобка
-        else if (c == ')')
-        {
-            while (!stack.IsEmpty() && stack.GetTop() != "(")
-            {
-                postfix += stack.Pop() + " ";
+        else if (isLetter(c)) {
+            std::string token = extractToken(infixExpression, i);
+            if (isFunction(token)) {
+                functions.push(token);
             }
-
-            if (stack.IsEmpty())
-                throw "Mismatched parentheses";
-
-            stack.Pop(); // Удаляем '('
-
-            // Если перед скобкой была функция, добавляем её
-            if (!stack.IsEmpty() && IsFunction(stack.GetTop()))
-            {
-                postfix += stack.Pop() + " ";
+            else {
+                throw std::runtime_error("Unknown function: " + token);
             }
         }
-        // Операция
-        else if (IsOperation(c))
-        {
-            while (!stack.IsEmpty() && stack.GetTop() != "(" &&
-                GetPriority(stack.GetTop()[0]) >= GetPriority(c))
-            {
-                postfix += stack.Pop() + " ";
-            }
-            stack.Push(string(1, c));
+        else if (c == '(') {
+            operators.push(c);
         }
-        else
-        {
-            throw "Invalid character in expression";
+        else if (c == ')') {
+            while (!operators.isEmpty() && operators.top() != '(') {
+                postfixExpression += operators.pop();
+                postfixExpression += ' ';
+            }
+            if (operators.isEmpty()) {
+                throw std::runtime_error("Mismatched parentheses");
+            }
+            operators.pop();
+
+            if (!functions.isEmpty()) {
+                postfixExpression += functions.pop();
+                postfixExpression += ' ';
+            }
+        }
+        else if (isOperator(c)) {
+            while (!operators.isEmpty() && operators.top() != '(' &&
+                getPrecedence(operators.top()) >= getPrecedence(c)) {
+                postfixExpression += operators.pop();
+                postfixExpression += ' ';
+            }
+            operators.push(c);
         }
     }
 
-    // Выталкиваем оставшиеся операции
-    while (!stack.IsEmpty())
-    {
-        string op = stack.Pop();
-        if (op == "(")
-            throw "Mismatched parentheses";
-        postfix += op + " ";
+    while (!operators.isEmpty()) {
+        if (operators.top() == '(') {
+            throw std::runtime_error("Mismatched parentheses");
+        }
+        postfixExpression += operators.pop();
+        postfixExpression += ' ';
+    }
+}
+
+double ArithmeticExpression::applyOperator(char op, double a, double b) const {
+    switch (op) {
+    case '+': return a + b;
+    case '-': return a - b;
+    case '*': return a * b;
+    case '/':
+        if (b == 0) throw std::runtime_error("Division by zero");
+        return a / b;
+    case '^': return pow(a, b);
+    default: throw std::runtime_error("Unknown operator");
+    }
+}
+
+double ArithmeticExpression::applyFunction(const std::string& func, double arg) const {
+    if (func == "sin") return sin(arg);
+    if (func == "cos") return cos(arg);
+    if (func == "tg") return tan(arg);
+    if (func == "log") {
+        if (arg <= 0) throw std::runtime_error("Logarithm of non-positive number");
+        return log(arg);
+    }
+    if (func == "exp") return exp(arg);
+    throw std::runtime_error("Unknown function: " + func);
+}
+
+double ArithmeticExpression::calculate() const {
+    if (postfixExpression.empty()) {
+        throw std::runtime_error("Postfix expression is empty");
     }
 
-    return postfix;
-}
+    Stack<double> values;
+    std::string token = "";
 
-void TPostfix::SetOperand(const string& name, double value)
-{
-    operands[name] = value;
-}
+    for (int i = 0; i < postfixExpression.length(); i++) {
+        char c = postfixExpression[i];
 
-double TPostfix::Calculate()
-{
-    if (postfix.empty())
-        ToPostfix();
-
-    TStack<double> stack(100);
-    string token = "";
-
-    for (size_t i = 0; i < postfix.length(); i++)
-    {
-        char c = postfix[i];
-
-        if (c == ' ')
-        {
-            if (!token.empty())
-            {
-                // Проверяем, это функция, операция или операнд
-                if (IsFunction(token))
-                {
-                    // Это функция - берем один аргумент
-                    if (stack.IsEmpty())
-                        throw "Invalid expression";
-
-                    double arg = stack.Pop();
-                    double result;
-
-                    if (token == "sin")
-                        result = sin(arg);
-                    else if (token == "cos")
-                        result = cos(arg);
-                    else if (token == "exp")
-                        result = exp(arg);
-                    else if (token == "log")
-                    {
-                        if (arg <= 0)
-                            throw "Logarithm of non-positive number";
-                        result = log(arg);
+        if (c == ' ') {
+            if (!token.empty()) {
+                if (isFunction(token)) {
+                    if (values.isEmpty()) {
+                        throw std::runtime_error("Not enough operands for function");
                     }
-                    else if (token == "tg" || token == "tan")
-                        result = tan(arg);
-                    else
-                        throw "Unknown function: " + token;
-
-                    stack.Push(result);
+                    double arg = values.pop();
+                    values.push(applyFunction(token, arg));
                 }
-                else if (token.length() == 1 && IsOperation(token[0]))
-                {
-                    // Это бинарная операция
-                    if (stack.GetCount() < 2)
-                        throw "Invalid expression";
+                else {
+                    double value = 0;
+                    bool negative = false;
+                    int start = 0;
 
-                    double b = stack.Pop();
-                    double a = stack.Pop();
-                    double result;
-
-                    switch (token[0])
-                    {
-                    case '+': result = a + b; break;
-                    case '-': result = a - b; break;
-                    case '*': result = a * b; break;
-                    case '/':
-                        if (b == 0)
-                            throw "Division by zero";
-                        result = a / b;
-                        break;
-                    case '^': result = pow(a, b); break;
-                    default: throw "Unknown operation";
+                    if (token[0] == '-') {
+                        negative = true;
+                        start = 1;
                     }
 
-                    stack.Push(result);
-                }
-                else
-                {
-                    // Это число или переменная
-                    double value;
+                    for (int j = start; j < token.length(); j++) {
+                        if (token[j] == '.') continue;
+                        value = value * 10 + (token[j] - '0');
+                    }
 
-                    // Проверяем, является ли токен числом
-                    bool isNumber = true;
-                    for (char ch : token)
-                    {
-                        if (!isdigit(ch) && ch != '.' && ch != '-')
-                        {
-                            isNumber = false;
+                    int decimalPos = -1;
+                    for (int j = 0; j < token.length(); j++) {
+                        if (token[j] == '.') {
+                            decimalPos = j;
                             break;
                         }
                     }
 
-                    if (isNumber)
-                    {
-                        value = stod(token);
-                    }
-                    else
-                    {
-                        // Это переменная
-                        auto it = operands.find(token);
-                        if (it == operands.end())
-                            throw "Unknown operand: " + token;
-                        value = it->second;
+                    if (decimalPos != -1) {
+                        int decimals = token.length() - decimalPos - 1;
+                        value /= pow(10, decimals);
                     }
 
-                    stack.Push(value);
+                    if (negative) value = -value;
+                    values.push(value);
                 }
-
                 token = "";
             }
+            continue;
         }
-        else
-        {
+
+        if (isOperator(c)) {
+            if (values.size() < 2) {
+                throw std::runtime_error("Not enough operands for operator");
+            }
+            double b = values.pop();
+            double a = values.pop();
+            values.push(applyOperator(c, a, b));
+        }
+        else {
             token += c;
         }
     }
 
-    if (stack.GetCount() != 1)
-        throw "Invalid expression";
+    if (values.size() != 1) {
+        throw std::runtime_error("Invalid expression");
+    }
 
-    return stack.Pop();
+    return values.top();
+}
+
+bool ArithmeticExpression::validate() const {
+    int parentheses = 0;
+
+    for (int i = 0; i < infixExpression.length(); i++) {
+        char c = infixExpression[i];
+        if (c == '(') parentheses++;
+        if (c == ')') parentheses--;
+        if (parentheses < 0) return false;
+    }
+
+    return parentheses == 0;
 }
