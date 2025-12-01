@@ -264,6 +264,7 @@ TEST(StackTest, SizeConsistency) {
     EXPECT_EQ(s.size(), 0);
 }
 
+
 // Тест: Копирующий конструктор с пустым стеком
 TEST(StackTest, CopyConstructorEmptyStack) {
     Stack<int> s1;

@@ -47,4 +47,4 @@ public:
     bool validate() const;
 };
 
-#endif // ARITHMETIC_H
+#endif 

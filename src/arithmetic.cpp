@@ -2,6 +2,7 @@
 #include <cmath>
 #include <stdexcept>
 
+
 ArithmeticExpression::ArithmeticExpression() : infixExpression(""), postfixExpression(""), variableX(0), variableY(0), variableZ(0) {}
 
 ArithmeticExpression::ArithmeticExpression(const std::string& expr) : infixExpression(expr), postfixExpression(""), variableX(0), variableY(0), variableZ(0) {

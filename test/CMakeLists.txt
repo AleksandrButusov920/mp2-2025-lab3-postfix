@@ -6,3 +6,4 @@ file(GLOB srcs "*.cpp" "../src/arithmetic.cpp")
 
 add_executable(${target} ${srcs} ${hdrs})
 target_link_libraries(${target} gtest)
+

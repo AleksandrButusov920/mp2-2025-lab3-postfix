@@ -637,4 +637,3 @@ TEST_F(ArithmeticTest, ComplexWithVariablesAndFunctions) {
     EXPECT_TRUE(areEqual(expr.calculate(), 3.0));
 }
 
-// НЕТ main() - его предоставит gtest_main при линковке
