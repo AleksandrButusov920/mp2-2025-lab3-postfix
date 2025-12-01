@@ -2,9 +2,9 @@
 #include <cmath>
 #include <stdexcept>
 
-ArithmeticExpression::ArithmeticExpression() : infixExpression(""), postfixExpression("") {}
+ArithmeticExpression::ArithmeticExpression() : infixExpression(""), postfixExpression(""), variableX(0), variableY(0), variableZ(0) {}
 
-ArithmeticExpression::ArithmeticExpression(const std::string& expr) : infixExpression(expr), postfixExpression("") {
+ArithmeticExpression::ArithmeticExpression(const std::string& expr) : infixExpression(expr), postfixExpression(""), variableX(0), variableY(0), variableZ(0) {
     convertToPostfix();
 }
 
@@ -21,6 +21,30 @@ std::string ArithmeticExpression::getPostfixExpression() const {
     return postfixExpression;
 }
 
+void ArithmeticExpression::setVariableX(double value) {
+    variableX = value;
+}
+
+void ArithmeticExpression::setVariableY(double value) {
+    variableY = value;
+}
+
+void ArithmeticExpression::setVariableZ(double value) {
+    variableZ = value;
+}
+
+double ArithmeticExpression::getVariableX() const {
+    return variableX;
+}
+
+double ArithmeticExpression::getVariableY() const {
+    return variableY;
+}
+
+double ArithmeticExpression::getVariableZ() const {
+    return variableZ;
+}
+
 bool ArithmeticExpression::isOperator(char c) const {
     return c == '+' || c == '-' || c == '*' || c == '/' || c == '^';
 }
@@ -28,6 +52,10 @@ bool ArithmeticExpression::isOperator(char c) const {
 bool ArithmeticExpression::isFunction(const std::string& token) const {
     return token == "sin" || token == "cos" || token == "tg" ||
         token == "log" || token == "exp";
+}
+
+bool ArithmeticExpression::isVariable(char c) const {
+    return c == 'x' || c == 'y' || c == 'z';
 }
 
 int ArithmeticExpression::getPrecedence(char op) const {
@@ -72,6 +100,13 @@ std::string ArithmeticExpression::extractToken(const std::string& expr, int& pos
     return token;
 }
 
+double ArithmeticExpression::getVariableValue(char var) const {
+    if (var == 'x') return variableX;
+    if (var == 'y') return variableY;
+    if (var == 'z') return variableZ;
+    throw std::runtime_error("Unknown variable");
+}
+
 void ArithmeticExpression::convertToPostfix() {
     Stack<char> operators;
     Stack<std::string> functions;
@@ -84,6 +119,10 @@ void ArithmeticExpression::convertToPostfix() {
 
         if (isDigit(c)) {
             postfixExpression += extractNumber(infixExpression, i);
+            postfixExpression += ' ';
+        }
+        else if (isVariable(c)) {
+            postfixExpression += c;
             postfixExpression += ' ';
         }
         else if (isLetter(c)) {
@@ -176,6 +215,9 @@ double ArithmeticExpression::calculate() const {
                     }
                     double arg = values.pop();
                     values.push(applyFunction(token, arg));
+                }
+                else if (token.length() == 1 && isVariable(token[0])) {
+                    values.push(getVariableValue(token[0]));
                 }
                 else {
                     double value = 0;

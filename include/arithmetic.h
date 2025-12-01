@@ -8,9 +8,13 @@ class ArithmeticExpression {
 private:
     std::string infixExpression;
     std::string postfixExpression;
+    double variableX;
+    double variableY;
+    double variableZ;
 
     bool isOperator(char c) const;
     bool isFunction(const std::string& token) const;
+    bool isVariable(char c) const;
     int getPrecedence(char op) const;
     bool isDigit(char c) const;
     bool isLetter(char c) const;
@@ -20,6 +24,7 @@ private:
 
     double applyOperator(char op, double a, double b) const;
     double applyFunction(const std::string& func, double arg) const;
+    double getVariableValue(char var) const;
 
 public:
     ArithmeticExpression();
@@ -28,6 +33,13 @@ public:
     void setInfixExpression(const std::string& expr);
     std::string getInfixExpression() const;
     std::string getPostfixExpression() const;
+
+    void setVariableX(double value);
+    void setVariableY(double value);
+    void setVariableZ(double value);
+    double getVariableX() const;
+    double getVariableY() const;
+    double getVariableZ() const;
 
     void convertToPostfix();
     double calculate() const;

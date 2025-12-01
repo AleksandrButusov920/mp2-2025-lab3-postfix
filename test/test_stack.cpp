@@ -335,3 +335,5 @@ TEST(StackTest, WithZero) {
     EXPECT_EQ(s.size(), 1);
     EXPECT_EQ(s.pop(), 0);
 }
+
+// НЕТ main() - его предоставит gtest_main при линковке
